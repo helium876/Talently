@@ -1,143 +1,96 @@
 'use client'
 
-import { Input } from '@/components/ui/input'
 import { useState } from 'react'
-import { handlePasswordReset, handlePasswordResetRequest } from '@/lib/actions'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
-import { LoadingButton } from '@/components/ui/loading-button'
-import { FormError } from '@/components/ui/form-error'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
-  const [error, setError] = useState<string>()
-  const [validationErrors, setValidationErrors] = useState<{
-    email?: boolean
-    password?: boolean
-  }>({})
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const validateForm = (formData: FormData) => {
-    const errors = {
-      email: token ? false : !formData.get('email'),
-      password: token ? !formData.get('password') : false,
-    }
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
 
-    setValidationErrors(errors)
-    return !Object.values(errors).some(Boolean)
-  }
+    try {
+      const formData = new FormData(event.currentTarget)
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.get('email'),
+        }),
+      })
 
-  async function clientAction(formData: FormData) {
-    const result = token 
-      ? await handlePasswordReset(formData)
-      : await handlePasswordResetRequest(formData)
-    
-    if (result?.error) {
-      setError(result.error)
-      toast.error(result.error)
-    } else if (result?.success) {
-      if (token) {
-        toast.success('Password reset successfully!')
-        router.push('/auth/login')
-      } else {
-        toast.success('Password reset instructions sent')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to send reset email')
       }
+
+      setSuccess(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {token ? 'Reset your password' : 'Forgot your password?'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {token ? (
-              'Enter your new password below'
-            ) : (
-              'Enter your email address and we will send you a password reset link'
-            )}
-          </p>
-        </div>
-
-        <form 
-          className="mt-8 space-y-6" 
-          action={clientAction}
-          onSubmit={(e) => {
-            if (!validateForm(new FormData(e.currentTarget))) {
-              e.preventDefault()
-            }
-          }}
-        >
-          {token && (
-            <input type="hidden" name="token" value={token} />
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Reset Password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="mb-4 rounded bg-red-50 p-4 text-red-600">
+              {error}
+            </div>
           )}
+          {success && (
+            <div className="mb-4 rounded bg-green-50 p-4 text-green-600">
+              If an account exists with that email, you will receive password
+              reset instructions.
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+              />
+            </div>
 
-          <div className="rounded-md shadow-sm space-y-4">
-            {!token ? (
-              <div>
-                <label htmlFor="email" className="sr-only">
-                  Email address
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  error={!!validationErrors.email}
-                  placeholder="Email address"
-                  className="appearance-none block w-full px-3 py-2"
-                  onChange={() => {
-                    setValidationErrors((prev) => ({ ...prev, email: false }))
-                    setError(undefined)
-                  }}
-                />
-              </div>
-            ) : (
-              <div>
-                <label htmlFor="password" className="sr-only">
-                  New password
-                </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  error={!!validationErrors.password}
-                  placeholder="New password"
-                  className="appearance-none block w-full px-3 py-2"
-                  onChange={() => {
-                    setValidationErrors((prev) => ({ ...prev, password: false }))
-                    setError(undefined)
-                  }}
-                />
-              </div>
-            )}
-          </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
 
-          <FormError error={error} />
-
-          <div>
-            <LoadingButton type="submit" className="w-full">
-              {token ? 'Reset password' : 'Send reset link'}
-            </LoadingButton>
-          </div>
-
-          <div className="text-sm text-center">
-            <Link
-              href="/auth/login"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              Back to sign in
-            </Link>
-          </div>
-        </form>
-      </div>
+            <div className="text-center text-sm">
+              Remember your password?{' '}
+              <Link
+                href="/auth/login"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Login
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

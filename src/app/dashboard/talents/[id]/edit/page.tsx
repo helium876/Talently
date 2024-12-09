@@ -1,35 +1,58 @@
-import { notFound } from 'next/navigation'
-import { getTalentById } from '@/lib/data'
-import { requireAuth } from '@/lib/session'
-import { TalentForm } from '@/components/talent-form'
+'use client'
 
-interface EditTalentPageProps {
-  params: {
-    id: string
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+export default function TalentEditPage() {
+  const params = useParams()
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadTalent() {
+      try {
+        const response = await fetch(`/api/talents/${params.id}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch talent')
+        }
+        setLoading(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        setLoading(false)
+      }
+    }
+
+    loadTalent()
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-lg">Loading talent...</div>
+      </div>
+    )
   }
-}
 
-export default async function EditTalentPage({
-  params
-}: EditTalentPageProps) {
-  const session = await requireAuth()
-  const talent = await getTalentById(session.id, params.id)
-
-  if (!talent) {
-    notFound()
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-lg text-red-600">{error}</div>
+      </div>
+    )
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-2xl font-bold mb-6">Edit Talent</h1>
-          <TalentForm 
-            businessId={session.id}
-            initialData={talent}
-          />
-        </div>
-      </div>
+    <div className="container mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit Talent</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>Edit form will be implemented here</div>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

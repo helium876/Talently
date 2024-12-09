@@ -62,17 +62,19 @@ jest.mock('next/server', () => {
     }
   }
 
+  const mockJson = jest.fn((data: unknown, init?: unknown) => ({
+    status: (init as { status?: number })?.status || 200,
+    json: async () => data,
+  })) as jest.Mock
+
+  const mockRequest = jest.fn((url: unknown, init?: unknown) => 
+    new MockRequest(url as string | URL, init as RequestInit)) as jest.Mock
+
   return {
     NextResponse: {
-      json: (jest.fn().mockImplementation(function(data: any, init?: { status?: number }) {
-        return {
-          status: init?.status || 200,
-          json: async () => data,
-        }
-      }) as unknown as jest.Mock),
+      json: mockJson,
     },
-    NextRequest: (jest.fn().mockImplementation((url: string | URL, init?: RequestInit) => 
-      new MockRequest(url, init)) as unknown as jest.Mock),
+    NextRequest: mockRequest,
   }
 })
 

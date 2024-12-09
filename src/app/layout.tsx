@@ -1,10 +1,13 @@
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
-import { connectToDatabase } from '@/lib/db'
-import { Toaster } from 'sonner'
+import { dbConnect } from '@/lib/db'
 
-export const metadata = {
+const inter = Inter({ subsets: ['latin'] })
+
+export const metadata: Metadata = {
   title: 'Talently',
-  description: 'Talent Management Platform',
+  description: 'Connect with top talent and grow your business',
 }
 
 export default async function RootLayout({
@@ -12,15 +15,14 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Ensure database connection is established
-  await connectToDatabase()
+  // Skip DB connection during static generation
+  if (process.env.NEXT_PHASE !== 'phase-production-build') {
+    await dbConnect()
+  }
 
   return (
     <html lang="en">
-      <body>
-        {children}
-        <Toaster />
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

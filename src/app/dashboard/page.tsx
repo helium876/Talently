@@ -1,45 +1,103 @@
-import { getTalents, getBookings } from '@/lib/data'
-import { requireAuth } from '@/lib/session'
-import { DashboardContent } from './dashboard-content'
-import { DashboardData, SerializedTalent, SerializedBooking } from '@/lib/types/data'
+'use client'
 
-export default async function DashboardPage() {
-  const session = await requireAuth()
-  
-  const [talents, bookings] = await Promise.all([
-    getTalents(session.id),
-    getBookings(session.id)
-  ])
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-  const dashboardData: DashboardData = {
-    business: session,
-    totalTalents: talents?.total || 0,
-    totalBookings: bookings?.total || 0,
-    recentTalents: talents?.data?.slice(0, 5).map((talent): SerializedTalent => ({
-      id: talent.id,
-      name: talent.name || '',
-      email: talent.email || '',
-      basicInfo: talent.basicInfo || '',
-      status: talent.status,
-      imagePath: talent.imagePath,
-      experience: talent.experience || 0,
-      hourlyRate: talent.hourlyRate || 0,
-      skills: talent.skills || []
-    })) || [],
-    recentBookings: bookings?.data?.slice(0, 5).map((booking): SerializedBooking => ({
-      id: booking.id,
-      talentId: booking.talentId,
-      status: booking.status,
-      startDate: booking.startDate ? new Date(booking.startDate).toISOString() : new Date().toISOString(),
-      endDate: booking.endDate ? new Date(booking.endDate).toISOString() : new Date().toISOString(),
-      hourlyRate: booking.hourlyRate || 0,
-      totalHours: booking.totalHours || 0,
-      totalAmount: booking.totalAmount || 0,
-      notes: booking.notes || null,
-      createdAt: booking.createdAt ? new Date(booking.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: booking.updatedAt ? new Date(booking.updatedAt).toISOString() : new Date().toISOString()
-    })) || []
+interface DashboardStats {
+  totalTalents: number
+  totalBookings: number
+  activeBookings: number
+  revenue: number
+}
+
+export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTalents: 0,
+    totalBookings: 0,
+    activeBookings: 0,
+    revenue: 0,
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard stats')
+        }
+
+        const data = await response.json()
+        setStats(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadStats()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-lg">Loading dashboard...</div>
+      </div>
+    )
   }
 
-  return <DashboardContent data={dashboardData} />
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-lg text-red-600">{error}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      <h1 className="mb-6 text-2xl font-bold">Dashboard</h1>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Talents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalTalents}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Bookings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalBookings}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Bookings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeBookings}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${stats.revenue.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 } 

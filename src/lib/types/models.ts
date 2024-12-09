@@ -14,6 +14,14 @@ export interface IBusiness extends Document {
   name: string
   email: string
   password: string
+  logoPath?: string | null
+  resetToken?: string | null
+  resetTokenExpires?: Date | null
+  emailPreferences?: {
+    marketingEmails: boolean
+    bookingNotifications: boolean
+    weeklyDigest: boolean
+  }
   talents: Array<{
     _id: Types.ObjectId
     name: string
@@ -28,6 +36,9 @@ export interface IBusiness extends Document {
     status: BookingStatus
     startDate: Date
     endDate: Date
+    hourlyRate: number
+    totalHours: number
+    totalAmount: number
     notes: string | null
   }>
   createdAt: Date

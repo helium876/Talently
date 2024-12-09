@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Business } from './db/models'
 import { connectToDatabase } from './db'
-import { hashPassword, verifyPassword } from './auth'
+import { hashPassword, verifyPassword } from './security/auth'
 import { TalentStatus } from './types/data'
 import { revalidatePath } from 'next/cache'
 
@@ -348,5 +348,45 @@ export async function updateTalent(talentId: string, input: TalentInput | FormDa
   } catch (error) {
     console.error('Update talent error:', error)
     return { error: 'Failed to update talent' }
+  }
+}
+
+export async function handlePasswordResetRequest(email: string) {
+  try {
+    await connectToDatabase()
+    const business = await Business.findOne({ email })
+    if (!business) {
+      return { error: 'No account found with this email' }
+    }
+
+    // In a real app, send reset email here
+    return { success: true }
+  } catch (error) {
+    console.error('Password reset request error:', error)
+    return { error: 'Failed to process password reset request' }
+  }
+}
+
+export async function handlePasswordReset(token: string, newPassword: string) {
+  try {
+    await connectToDatabase()
+    const business = await Business.findOne({ 
+      resetToken: token,
+      resetTokenExpires: { $gt: new Date() }
+    })
+
+    if (!business) {
+      return { error: 'Invalid or expired reset token' }
+    }
+
+    business.password = await hashPassword(newPassword)
+    business.resetToken = null
+    business.resetTokenExpires = null
+    await business.save()
+
+    return { success: true }
+  } catch (error) {
+    console.error('Password reset error:', error)
+    return { error: 'Failed to reset password' }
   }
 }

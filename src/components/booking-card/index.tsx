@@ -5,8 +5,8 @@ import { BookingStatus, SerializedBooking } from '@/lib/types/data'
 import { formatCurrency } from '@/lib/utils'
 
 interface BookingCardProps {
-  booking: SerializedBooking
-  businessId?: string
+  booking: SerializedBooking;
+  businessId: string;
 }
 
 export function BookingCard({ booking, businessId }: BookingCardProps) {
@@ -19,8 +19,8 @@ export function BookingCard({ booking, businessId }: BookingCardProps) {
             <p className="text-sm text-gray-500">Talent ID: {booking.talentId}</p>
           </div>
           <span className={`px-2 py-1 rounded-full text-xs ${
-            booking.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
-            booking.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+            booking.status === BookingStatus.CONFIRMED ? 'bg-green-100 text-green-800' :
+            booking.status === BookingStatus.PENDING ? 'bg-yellow-100 text-yellow-800' :
             'bg-red-100 text-red-800'
           }`}>
             {booking.status}
@@ -28,7 +28,11 @@ export function BookingCard({ booking, businessId }: BookingCardProps) {
         </div>
         <div className="mt-4">
           <p className="text-sm text-gray-500">
-            {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+            {booking.startDate && booking.endDate ? (
+              `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`
+            ) : (
+              'Dates not set'
+            )}
           </p>
           <div className="mt-2 text-sm">
             <p>Rate: {formatCurrency(booking.hourlyRate)}/hr</p>

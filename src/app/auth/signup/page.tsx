@@ -1,44 +1,55 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Input } from '@/components/ui/input'
-import { LoadingButton } from '@/components/ui/loading-button'
-import { handleSignup } from '@/lib/actions'
-import { toast } from 'sonner'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function SignupPage() {
-  const [error, setError] = useState<string>()
-  const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
-  async function onSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true)
+    setError(null)
+
     try {
-      setLoading(true)
-      setError(undefined)
+      const formData = new FormData(event.currentTarget)
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+        }),
+        cache: 'no-store',
+      })
 
-      const result = await handleSignup(formData)
-      
-      if (result?.error) {
-        setError(result.error)
-        toast.error(result.error)
-      } else {
-        toast.success('Account created successfully')
-        router.push('/dashboard')
-        router.refresh()
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sign up')
       }
-    } catch (error: any) {
-      if (error?.digest?.includes('NEXT_REDIRECT')) {
-        toast.success('Account created successfully')
-        router.push('/dashboard')
-        router.refresh()
-        return
-      }
-      
-      console.error('Signup error:', error)
-      setError('An unexpected error occurred')
-      toast.error('An unexpected error occurred')
+
+      toast({
+        title: 'Account created!',
+        description: 'Please log in with your new account.',
+      })
+
+      router.push('/auth/login')
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred during signup')
     } finally {
       setLoading(false)
     }
@@ -46,92 +57,70 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-6 shadow-lg">
-        <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-            Create your account
-          </h2>
-        </div>
-        <form onSubmit={async (e) => {
-          e.preventDefault()
-          await onSubmit(new FormData(e.currentTarget))
-        }}>
-          <div className="-space-y-px rounded-md shadow-sm">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Create an Account</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="mb-4 rounded bg-red-50 p-4 text-red-600">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="businessName" className="sr-only">
-                Business Name
-              </label>
+              <Label htmlFor="name">Name</Label>
               <Input
-                id="businessName"
-                name="businessName"
-                type="text"
+                id="name"
+                name="name"
                 required
-                className="relative block w-full rounded-t-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Business Name"
+                autoComplete="name"
+                placeholder="Enter your full name"
+                minLength={2}
               />
             </div>
+
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
                 required
-                className="relative block w-full border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Email address"
+                autoComplete="email"
+                placeholder="Enter your email"
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="new-password"
                 required
-                className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Password"
+                autoComplete="new-password"
+                placeholder="Create a password"
+                minLength={6}
               />
             </div>
-          </div>
 
-          {error && (
-            <div className="mt-4 rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">{error}</h3>
-                </div>
-              </div>
-            </div>
-          )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Creating account...' : 'Sign up'}
+            </Button>
 
-          <div className="mt-6 flex items-center justify-end">
-            <div className="text-sm">
+            <div className="text-center text-sm">
+              Already have an account?{' '}
               <Link
                 href="/auth/login"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
+                className="font-medium text-blue-600 hover:text-blue-500"
               >
-                Already have an account? Sign in
+                Login
               </Link>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <LoadingButton
-              type="submit"
-              loading={loading}
-              className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Create Account
-            </LoadingButton>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

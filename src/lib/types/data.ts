@@ -1,7 +1,7 @@
 export enum TalentStatus {
   ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  FEATURED = 'FEATURED'
+  FEATURED = 'FEATURED',
+  INACTIVE = 'INACTIVE'
 }
 
 export enum BookingStatus {
@@ -10,7 +10,31 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED'
 }
 
-export const TALENT_STATUSES = Object.values(TalentStatus)
+export interface SerializedTalent {
+  id: string
+  name: string
+  basicInfo: string
+  status: TalentStatus
+  imagePath: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface SerializedBooking {
+  id: string
+  talentId?: string
+  clientName: string
+  clientEmail: string
+  status: BookingStatus
+  startDate: string | null
+  endDate: string | null
+  hourlyRate: number
+  totalHours: number
+  totalAmount: number
+  notes: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
 
 export interface SerializedBusiness {
   id: string
@@ -22,34 +46,10 @@ export interface SerializedBusiness {
     bookingNotifications: boolean
     weeklyDigest: boolean
   }
+  talents: SerializedTalent[]
+  bookings: SerializedBooking[]
   createdAt: string | null
   updatedAt: string | null
-}
-
-export interface SerializedTalent {
-  id: string
-  name: string
-  email: string
-  basicInfo: string
-  status: TalentStatus
-  imagePath: string | null
-  experience: number
-  hourlyRate: number
-  skills: string[]
-}
-
-export interface SerializedBooking {
-  id: string
-  talentId: string
-  status: BookingStatus
-  startDate: string
-  endDate: string
-  hourlyRate: number
-  totalHours: number
-  totalAmount: number
-  notes: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 export interface DashboardData {
