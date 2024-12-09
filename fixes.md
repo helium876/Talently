@@ -1,7 +1,7 @@
 # Codebase Issues and Fixes
 
 ## Database Setup ✅
-- ✅ Using MongoDB with Mongoose
+- ✅ Using MongoDB with Mongoose 
 - ✅ Database connection handling
 - ✅ Model definitions with TypeScript
 - ✅ Proper error handling for database operations
