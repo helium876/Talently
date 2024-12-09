@@ -1,7 +1,7 @@
 # instructions_phase_2.md
 
 **Intro Note:**  
-In Phase 1.1, you established a server-rendered SaaS platform enabling multiple businesses to sign up, log in, manage basic business information, create simple talent profiles, and accept basic booking requests. The system uses HTML forms and server-side rendering, with no direct API endpoints accessible by clients, ensuring high security and maintainability.
+In Phase 1.2, you established a server-rendered SaaS platform enabling multiple businesses to sign up, log in, manage basic business information, create simple talent profiles, and accept basic booking requests. The system uses HTML forms and server-side rendering, with no direct API endpoints accessible by clients, ensuring high security and maintainability.
 
 In Phase 2, you will enhance the platform by introducing services and pricing for each talent, allowing businesses to define their talents’ availability, and improving the public booking experience so clients can select specific services and time slots. You will also enable the business admin to confirm or reject bookings and introduce basic email notifications. All improvements should continue to follow the same pattern: fully server-rendered pages, form submissions for all interactions, no client-side API calls, and a visually consistent and user-friendly interface styled similarly to Phase 1.
 
