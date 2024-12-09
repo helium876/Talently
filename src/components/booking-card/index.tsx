@@ -6,9 +6,10 @@ import { formatCurrency } from '@/lib/utils'
 
 interface BookingCardProps {
   booking: SerializedBooking
+  businessId?: string
 }
 
-export function BookingCard({ booking }: BookingCardProps) {
+export function BookingCard({ booking, businessId }: BookingCardProps) {
   return (
     <Card>
       <div className="p-4">

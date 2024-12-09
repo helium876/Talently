@@ -3,9 +3,7 @@
 import { cookies } from 'next/headers'
 import { Business } from './db/models'
 import { connectToDatabase } from './db'
-import { IBusiness } from './types/models'
 import { SerializedBusiness } from './types/data'
-import { serializeMongooseObject } from './utils'
 
 export async function getSession(): Promise<SerializedBusiness | null> {
   try {
@@ -23,6 +21,12 @@ export async function getSession(): Promise<SerializedBusiness | null> {
       id: business._id.toString(),
       name: business.name,
       email: business.email,
+      logoPath: business.logoPath || null,
+      emailPreferences: business.emailPreferences || {
+        marketingEmails: false,
+        bookingNotifications: true,
+        weeklyDigest: false
+      },
       createdAt: business.createdAt?.toISOString() || null,
       updatedAt: business.updatedAt?.toISOString() || null
     }
@@ -32,28 +36,35 @@ export async function getSession(): Promise<SerializedBusiness | null> {
   }
 }
 
-export async function requireAuth(): Promise<SerializedBusiness> {
-  const business = await getSession()
-  if (!business) {
-    throw new Error('Authentication required')
+export async function requireAuth() {
+  const session = await getSession()
+  if (!session) {
+    throw new Error('Unauthorized')
   }
-  return business
+  return session
 }
 
-export async function getCurrentBusiness(): Promise<SerializedBusiness | null> {
+export async function getBusinessById(id: string): Promise<SerializedBusiness | null> {
   try {
-    const business = await getSession()
+    await connectToDatabase()
+    const business = await Business.findById(id)
     if (!business) return null
 
     return {
       id: business.id,
       name: business.name,
       email: business.email,
-      createdAt: business.createdAt,
-      updatedAt: business.updatedAt
+      logoPath: business.logoPath || null,
+      emailPreferences: business.emailPreferences || {
+        marketingEmails: false,
+        bookingNotifications: true,
+        weeklyDigest: false
+      },
+      createdAt: business.createdAt?.toISOString() || null,
+      updatedAt: business.updatedAt?.toISOString() || null
     }
   } catch (error) {
-    console.error('Get current business error:', error)
+    console.error('Get business error:', error)
     return null
   }
 } 
