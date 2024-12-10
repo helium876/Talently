@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
 import { TalentModel } from '@/lib/db/models/talent'
-import type { Talent } from '@/lib/types'
+import type { Talent } from '@/lib/db/models/talent'
 
 // CORS headers
 const corsHeaders = {
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
   try {
     await dbConnect()
-    const talents = await TalentModel.find({ status: 'ACTIVE' }).lean()
+    const talents = await TalentModel.find().lean() as (Talent & { _id: any })[]
 
     if (!talents) {
       return new NextResponse(
@@ -47,11 +47,17 @@ export async function GET(request: Request) {
     return new NextResponse(
       JSON.stringify({ 
         talents: talents.map(talent => ({
-          id: talent.id.toString(),
+          id: talent._id.toString(),
           name: talent.name || '',
+          email: talent.email || '',
+          title: talent.title || '',
           basicInfo: talent.basicInfo || '',
-          status: talent.status || 'INACTIVE',
-          imagePath: talent.imagePath || '',
+          status: talent.status || 'pending',
+          skills: talent.skills || [],
+          experience: talent.experience || '',
+          education: talent.education || '',
+          availability: talent.availability || '',
+          rate: talent.rate || 0,
         }))
       }),
       { 
@@ -67,7 +73,7 @@ export async function GET(request: Request) {
     return new NextResponse(
       JSON.stringify({ error: 'Failed to fetch talents', talents: [] }),
       { 
-        status: 200, // Return 200 with empty array instead of 500
+        status: 200,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
@@ -78,7 +84,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  // Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, {
       status: 200,
@@ -87,12 +92,43 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, basicInfo, status } = await request.json()
+    const body = await request.json()
+    console.log('Received talent creation request:', body)
+
+    const { 
+      userId,
+      name,
+      email,
+      phone,
+      title,
+      basicInfo,
+      skills,
+      experience,
+      education,
+      availability,
+      rate,
+      status = 'pending'
+    } = body
+
+    // Log missing fields
+    const missingFields = ['userId', 'name', 'email', 'title', 'basicInfo', 'skills', 
+      'experience', 'education', 'availability', 'rate'].filter(field => !body[field])
+    
+    if (missingFields.length > 0) {
+      console.log('Missing fields:', missingFields)
+    }
 
     // Basic validation
-    if (!name || !basicInfo || !status) {
+    if (!userId || !name || !email || !title || !basicInfo || !skills || 
+        !experience || !education || !availability || !rate) {
       return new NextResponse(
-        JSON.stringify({ error: 'Name, basic info, and status are required' }),
+        JSON.stringify({ 
+          error: 'Missing required fields',
+          required: ['userId', 'name', 'email', 'title', 'basicInfo', 'skills', 
+                    'experience', 'education', 'availability', 'rate'],
+          received: body,
+          missing: missingFields
+        }),
         { 
           status: 400,
           headers: {
@@ -104,13 +140,36 @@ export async function POST(request: Request) {
     }
 
     await dbConnect()
-    const talent = await TalentModel.create({
+    console.log('Creating talent with data:', {
+      userId,
       name,
+      email,
+      title,
       basicInfo,
-      status,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      skills,
+      experience,
+      education,
+      availability,
+      rate,
+      status
     })
+
+    const talent = await TalentModel.create({
+      userId,
+      name,
+      email,
+      phone,
+      title,
+      basicInfo,
+      skills,
+      experience,
+      education,
+      availability,
+      rate: Number(rate), // Ensure rate is a number
+      status
+    })
+
+    console.log('Talent created successfully:', talent)
 
     return new NextResponse(
       JSON.stringify({
@@ -118,8 +177,10 @@ export async function POST(request: Request) {
         talent: {
           id: talent._id.toString(),
           name: talent.name,
+          email: talent.email,
+          title: talent.title,
           basicInfo: talent.basicInfo,
-          status: talent.status,
+          status: talent.status
         }
       }),
       { 
@@ -132,8 +193,17 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error('Talent creation error:', error)
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
     return new NextResponse(
-      JSON.stringify({ error: 'An error occurred during talent creation' }),
+      JSON.stringify({ 
+        error: 'An error occurred during talent creation',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
       { 
         status: 500,
         headers: {
