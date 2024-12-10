@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { TalentModel } from '@/lib/db/models'
+import { dbConnect } from '@/lib/db'
+import { TalentModel } from '@/lib/db/models/talent'
 import type { Talent } from '@/lib/types'
 
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
   'Access-Control-Allow-Credentials': 'true'
 }
 
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await connectToDatabase()
+    await dbConnect()
     const talents = await TalentModel.find({ status: 'ACTIVE' }).lean()
 
     if (!talents) {
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     return new NextResponse(
       JSON.stringify({ 
         talents: talents.map(talent => ({
-          id: talent._id.toString(),
+          id: talent.id.toString(),
           name: talent.name || '',
           basicInfo: talent.basicInfo || '',
           status: talent.status || 'INACTIVE',
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       )
     }
 
-    await connectToDatabase()
+    await dbConnect()
     const talent = await TalentModel.create({
       name,
       basicInfo,

@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import mongoose, { Schema, model, models } from 'mongoose'
 
 export interface User {
   name: string
@@ -34,4 +34,5 @@ const userSchema = new Schema<User>(
 // Ensure email is unique
 userSchema.index({ email: 1 }, { unique: true })
 
-export default models.User || model<User>('User', userSchema)
+const UserModel = mongoose.models.User || mongoose.model('User', userSchema)
+export default UserModel
