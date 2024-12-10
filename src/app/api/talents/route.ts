@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { dbConnect } from '@/lib/db'
 import { TalentModel } from '@/lib/db/models/talent'
 import type { Talent } from '@/lib/db/models/talent'
+import { cookies } from 'next/headers'
+import { Business } from '@/lib/db/models'
 
 // CORS headers
 const corsHeaders = {
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
 
   try {
     await dbConnect()
-    const talents = await TalentModel.find().lean() as (Talent & { _id: any })[]
+    const talents = (await TalentModel.find().lean()) as unknown as Array<Talent & { _id: any }>
 
     if (!talents) {
       return new NextResponse(
@@ -55,9 +57,8 @@ export async function GET(request: Request) {
           status: talent.status || 'pending',
           skills: talent.skills || [],
           experience: talent.experience || '',
-          education: talent.education || '',
-          availability: talent.availability || '',
           rate: talent.rate || 0,
+          imagePath: talent.imagePath || null,
         }))
       }),
       { 
@@ -95,8 +96,37 @@ export async function POST(request: Request) {
     const body = await request.json()
     console.log('Received talent creation request:', body)
 
+    // Get the current session to get businessId
+    const sessionId = cookies().get('session')?.value
+    if (!sessionId) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Unauthorized - Please log in' }),
+        { 
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      )
+    }
+
+    await dbConnect()
+    const business = await Business.findById(sessionId)
+    if (!business) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Business not found' }),
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        }
+      )
+    }
+
     const { 
-      userId,
       name,
       email,
       phone,
@@ -104,28 +134,22 @@ export async function POST(request: Request) {
       basicInfo,
       skills,
       experience,
-      education,
-      availability,
       rate,
-      status = 'pending'
+      status = 'pending',
+      imagePath
     } = body
 
     // Log missing fields
-    const missingFields = ['userId', 'name', 'email', 'title', 'basicInfo', 'skills', 
-      'experience', 'education', 'availability', 'rate'].filter(field => !body[field])
+    const missingFields = ['name', 'email', 'title', 'basicInfo', 'skills', 
+      'experience', 'rate'].filter(field => !body[field])
     
     if (missingFields.length > 0) {
       console.log('Missing fields:', missingFields)
-    }
-
-    // Basic validation
-    if (!userId || !name || !email || !title || !basicInfo || !skills || 
-        !experience || !education || !availability || !rate) {
       return new NextResponse(
         JSON.stringify({ 
           error: 'Missing required fields',
-          required: ['userId', 'name', 'email', 'title', 'basicInfo', 'skills', 
-                    'experience', 'education', 'availability', 'rate'],
+          required: ['name', 'email', 'title', 'basicInfo', 'skills', 
+                    'experience', 'rate'],
           received: body,
           missing: missingFields
         }),
@@ -139,23 +163,20 @@ export async function POST(request: Request) {
       )
     }
 
-    await dbConnect()
     console.log('Creating talent with data:', {
-      userId,
+      businessId: business._id,
       name,
       email,
       title,
       basicInfo,
       skills,
       experience,
-      education,
-      availability,
       rate,
       status
     })
 
     const talent = await TalentModel.create({
-      userId,
+      businessId: business._id,
       name,
       email,
       phone,
@@ -163,10 +184,9 @@ export async function POST(request: Request) {
       basicInfo,
       skills,
       experience,
-      education,
-      availability,
-      rate: Number(rate), // Ensure rate is a number
-      status
+      rate: Number(rate),
+      status,
+      imagePath
     })
 
     console.log('Talent created successfully:', talent)
@@ -176,11 +196,13 @@ export async function POST(request: Request) {
         success: true,
         talent: {
           id: talent._id.toString(),
+          businessId: talent.businessId.toString(),
           name: talent.name,
           email: talent.email,
           title: talent.title,
           basicInfo: talent.basicInfo,
-          status: talent.status
+          status: talent.status,
+          imagePath: talent.imagePath
         }
       }),
       { 

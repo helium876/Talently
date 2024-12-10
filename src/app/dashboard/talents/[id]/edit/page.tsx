@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 interface TalentData {
   id: string
+  businessId: string
   name: string
   email: string
   phone?: string
@@ -17,10 +18,9 @@ interface TalentData {
   basicInfo: string
   skills: string[]
   experience: string
-  education: string
-  availability: string
   rate: number
   status: string
+  imagePath?: string
 }
 
 export default function TalentEditPage() {
@@ -56,6 +56,24 @@ export default function TalentEditPage() {
 
     try {
       const formData = new FormData(event.currentTarget)
+      const imageFile = formData.get('image') as File
+      
+      // Only process image if a new one is selected
+      let imagePath = talent?.imagePath
+      if (imageFile && imageFile.size > 0) {
+        const imageFormData = new FormData()
+        imageFormData.append('file', imageFile)
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: imageFormData,
+        })
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image')
+        }
+        const { path } = await uploadResponse.json()
+        imagePath = path
+      }
+
       const response = await fetch(`/api/talents/${params.id}`, {
         method: 'PUT',
         headers: {
@@ -69,10 +87,9 @@ export default function TalentEditPage() {
           basicInfo: formData.get('basicInfo'),
           skills: formData.get('skills')?.toString().split(',').map(s => s.trim()),
           experience: formData.get('experience'),
-          education: formData.get('education'),
-          availability: formData.get('availability'),
           rate: Number(formData.get('rate')),
-          status: formData.get('status')
+          status: formData.get('status'),
+          imagePath
         }),
       })
 
@@ -127,6 +144,20 @@ export default function TalentEditPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <Label htmlFor="image">Profile Image</Label>
+              <Input id="image" name="image" type="file" accept="image/*" />
+              {talent?.imagePath && (
+                <div className="mt-2">
+                  <img 
+                    src={talent.imagePath} 
+                    alt="Current profile" 
+                    className="h-20 w-20 rounded-lg object-cover"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" defaultValue={talent.name} required />
             </div>
@@ -143,12 +174,12 @@ export default function TalentEditPage() {
 
             <div>
               <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" defaultValue={talent.title} required />
+              <Input id="title" name="title" defaultValue={talent.title} required placeholder="e.g., Senior Developer" />
             </div>
 
             <div>
               <Label htmlFor="basicInfo">Basic Info</Label>
-              <Textarea id="basicInfo" name="basicInfo" defaultValue={talent.basicInfo} required />
+              <Textarea id="basicInfo" name="basicInfo" defaultValue={talent.basicInfo} required placeholder="Brief description of the talent..." />
             </div>
 
             <div>
@@ -164,23 +195,7 @@ export default function TalentEditPage() {
 
             <div>
               <Label htmlFor="experience">Experience</Label>
-              <Textarea id="experience" name="experience" defaultValue={talent.experience} required />
-            </div>
-
-            <div>
-              <Label htmlFor="education">Education</Label>
-              <Textarea id="education" name="education" defaultValue={talent.education} required />
-            </div>
-
-            <div>
-              <Label htmlFor="availability">Availability</Label>
-              <Input 
-                id="availability" 
-                name="availability" 
-                defaultValue={talent.availability} 
-                required 
-                placeholder="e.g., Full-time, Part-time" 
-              />
+              <Textarea id="experience" name="experience" defaultValue={talent.experience} required placeholder="Details about work experience..." />
             </div>
 
             <div>

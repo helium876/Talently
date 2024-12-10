@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +19,24 @@ export default function NewTalentPage() {
 
     try {
       const formData = new FormData(event.currentTarget)
+      const imageFile = (formData.get('image') as File)?.size > 0 ? formData.get('image') as File : null
+
+      // First upload image if present
+      let imagePath = null
+      if (imageFile) {
+        const imageFormData = new FormData()
+        imageFormData.append('file', imageFile)
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: imageFormData,
+        })
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image')
+        }
+        const { path } = await uploadResponse.json()
+        imagePath = path
+      }
+
       const response = await fetch('/api/talents', {
         method: 'POST',
         headers: {
@@ -33,10 +51,9 @@ export default function NewTalentPage() {
           basicInfo: formData.get('basicInfo'),
           skills: formData.get('skills')?.toString().split(',').map(s => s.trim()),
           experience: formData.get('experience'),
-          education: formData.get('education'),
-          availability: formData.get('availability'),
           rate: Number(formData.get('rate')),
-          status: formData.get('status') || 'pending'
+          status: formData.get('status') || 'pending',
+          imagePath
         }),
       })
 
@@ -69,6 +86,11 @@ export default function NewTalentPage() {
             <input type="hidden" name="userId" value="user_123" />
             
             <div>
+              <Label htmlFor="image">Profile Image</Label>
+              <Input id="image" name="image" type="file" accept="image/*" />
+            </div>
+
+            <div>
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" required />
             </div>
@@ -85,12 +107,12 @@ export default function NewTalentPage() {
 
             <div>
               <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" required />
+              <Input id="title" name="title" required placeholder="e.g., Senior Developer" />
             </div>
 
             <div>
               <Label htmlFor="basicInfo">Basic Info</Label>
-              <Textarea id="basicInfo" name="basicInfo" required />
+              <Textarea id="basicInfo" name="basicInfo" required placeholder="Brief description of the talent..." />
             </div>
 
             <div>
@@ -100,17 +122,7 @@ export default function NewTalentPage() {
 
             <div>
               <Label htmlFor="experience">Experience</Label>
-              <Textarea id="experience" name="experience" required />
-            </div>
-
-            <div>
-              <Label htmlFor="education">Education</Label>
-              <Textarea id="education" name="education" required />
-            </div>
-
-            <div>
-              <Label htmlFor="availability">Availability</Label>
-              <Input id="availability" name="availability" required placeholder="e.g., Full-time, Part-time" />
+              <Textarea id="experience" name="experience" required placeholder="Details about work experience..." />
             </div>
 
             <div>
